@@ -1,0 +1,13 @@
+{
+    "name": "ks/schocken",
+    "require": {
+        "slim/slim": "^2.6",
+        "illuminate/database": "^5.1"
+    },
+    "authors": [
+        {
+            "name": "Stefan Kirschner",
+            "email": "s-kirschner@web.de"
+        }
+    ]
+}
