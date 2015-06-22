@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "15b47fb2489fa9117f66b0f3e637a9c0",
+    "hash": "596906c3760f7203abf78a3743c5c695",
     "packages": [
         {
             "name": "danielstjules/stringy",
@@ -274,6 +274,51 @@
             "time": "2015-06-15 07:46:41"
         },
         {
+            "name": "illuminate/events",
+            "version": "5.1.x-dev",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/illuminate/events.git",
+                "reference": "86b92d30263cfea5e41cc25be211e653e02c0330"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/illuminate/events/zipball/86b92d30263cfea5e41cc25be211e653e02c0330",
+                "reference": "86b92d30263cfea5e41cc25be211e653e02c0330",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/container": "5.1.*",
+                "illuminate/contracts": "5.1.*",
+                "illuminate/support": "5.1.*",
+                "php": ">=5.5.9"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "5.1-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Illuminate\\Events\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylor Otwell",
+                    "email": "taylorotwell@gmail.com"
+                }
+            ],
+            "description": "The Illuminate Events package.",
+            "homepage": "http://laravel.com",
+            "time": "2015-06-22 13:30:17"
+        },
+        {
             "name": "illuminate/support",
             "version": "v5.1.2",
             "source": {
@@ -484,7 +529,9 @@
     "packages-dev": [],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {
+        "illuminate/events": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": [],
