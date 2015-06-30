@@ -2,9 +2,15 @@
 namespace App;
 require '../vendor/autoload.php';
 use App\Models\Name as Name;
+use App\Models\Game as Game;
+use App\Models\Edit as Edit;
+use App\Models\EditAction as EditAction;
+use App\Models\EditActionKind as EditActionKind;
+use App\Models\Score as Score;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Container\Container;
+use Illuminate\Database\Eloquent\Model;
 /*datensatz
 liste, id => {name, wert}, wert numerisch, null erlaubt (für "nicht teilgenommen"), id eindeutig, namensduplikate erlaubt
 
@@ -54,6 +60,18 @@ $name = new Name();
 
 $app->get("/names", function(){
     echo Name::all()->toJson();
+});
+
+$app->get("/scores", function(){
+    $scores = Score::where('game', 1)->take(1)->get();
+    $score = $scores[0];
+    $score->score = 887;
+    $save = $score->save();
+    $something = Score::create(['game' => 5, 'name' => 97, 'score' => 86]);
+    $something->delete();
+    
+    echo json_encode($something);
+    //echo Score::all()->toJson();
 });
 
 $app->run();
