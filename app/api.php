@@ -37,6 +37,16 @@ rückgängigmachen:
 
 performance und integrität: eigentlich bräuchte man nur die transitionen, tabellen personen und datensätze bilden sich ja durch die transitionen "selbst". aber: wenn man diese tabellen zusätzlich "rumliegen" hat, geht das anzeigen schneller. findet eine bearbeitung statt, muss nur die eine transition auf die beiden anderen tabellen "committet" werden. allerdings muss irgendwo hinterlegt sein, auf welcher transitions-id der aktuelle datenstand basiert. vielleicht öffnen zwei personen mal gleichzeitig den bearbeitungsmodus. der eine schickt seine daten vor dem anderen ab. der andere muss dann eine fehlermeldung bekommen, die ihm sagt dass sich inzwischen die daten geändert haben. schreibzugriffe auf die datenbank müssen synchronisiert werden - zwei personen können ihre daten ja fast zeitgleich abschicken, sodass keiner eine fehlermeldung bekommt.*/
 
+define('GAMES_TABLE', './data/games.json');
+define('RAND_CHARSET', '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+
+function getRandomString($length){
+    $result = '';
+    $charsetLength = strlen(RAND_CHARSET);
+    for ($i = 0; $i < $length; $i++)
+        $result .= RAND_CHARSET[rand(0, $charsetLength - 1)];
+    return $result;
+}
 
 //Eloquent
 $capsule = new Capsule;
@@ -54,12 +64,54 @@ $capsule->addConnection([
 $capsule->setEventDispatcher(new Dispatcher(new Container));
 $capsule->bootEloquent();
 
-
 $app = new \Slim\Slim();
 $name = new Name();
 
 $app->get("/names", function(){
     echo Name::all()->toJson();
+});
+
+$app->post("/games", function() use ($app){
+    $gamesTable = false;
+    if (file_exists(GAMES_TABLE))        
+        $gamesTable = file_get_contents(GAMES_TABLE);
+
+    if ($gamesTable !== false)
+        $gamesTable = json_decode($gamesTable, true);
+    else
+        $gamesTable = [];
+    
+    $bodyStr = $app->request->getBody();    
+    $bodyObj = json_decode($bodyStr, true);
+    if ($bodyObj && array_key_exists('name', $bodyObj) && (strlen($bodyObj['name']) > 0)) {
+        $gameId = getRandomString(5);
+        while (array_key_exists($gameId, $gamesTable)){
+            $gameId = getRandomString(5);
+        }
+        $gamesTable[$gameId] = $bodyObj['name'];
+        $writeResult = file_put_contents(GAMES_TABLE, json_encode($gamesTable));
+        if ($writeResult === false)
+            $app->response->setStatus(501);
+    }
+    else
+        $app->response->setStatus(400);
+});
+
+$app->get("/games/:id", function($id) use ($app){
+    $gamesTable = false;
+    if (file_exists(GAMES_TABLE))        
+        $gamesTable = file_get_contents(GAMES_TABLE);
+
+    if ($gamesTable !== false)
+        $gamesTable = json_decode($gamesTable, true);
+    else
+        $gamesTable = [];
+    
+    if (array_key_exists($id, $gamesTable)){
+        echo $gamesTable[$id];
+    }
+    else
+        $app->response->setStatus(404);
 });
 
 $app->get("/scores", function(){
