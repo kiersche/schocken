@@ -38,6 +38,9 @@ rückgängigmachen:
 performance und integrität: eigentlich bräuchte man nur die transitionen, tabellen personen und datensätze bilden sich ja durch die transitionen "selbst". aber: wenn man diese tabellen zusätzlich "rumliegen" hat, geht das anzeigen schneller. findet eine bearbeitung statt, muss nur die eine transition auf die beiden anderen tabellen "committet" werden. allerdings muss irgendwo hinterlegt sein, auf welcher transitions-id der aktuelle datenstand basiert. vielleicht öffnen zwei personen mal gleichzeitig den bearbeitungsmodus. der eine schickt seine daten vor dem anderen ab. der andere muss dann eine fehlermeldung bekommen, die ihm sagt dass sich inzwischen die daten geändert haben. schreibzugriffe auf die datenbank müssen synchronisiert werden - zwei personen können ihre daten ja fast zeitgleich abschicken, sodass keiner eine fehlermeldung bekommt.*/
 
 define('GAMES_TABLE', './data/games.json');
+define('SESSIONS_TABLE', './data/sessions.json');
+define('PLAYERS_TABLE', './data/players.json');
+define('SCORES_TABLE', './data/scores.json');
 define('RAND_CHARSET', '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
 
 function getRandomString($length){
@@ -71,47 +74,264 @@ $app->get("/names", function(){
     echo Name::all()->toJson();
 });
 
-$app->post("/games", function() use ($app){
-    $gamesTable = false;
-    if (file_exists(GAMES_TABLE))        
-        $gamesTable = file_get_contents(GAMES_TABLE);
+function getTable($tableFile){
+    $table = false;
+    if (file_exists($tableFile))        
+        $table = file_get_contents($tableFile);
 
-    if ($gamesTable !== false)
-        $gamesTable = json_decode($gamesTable, true);
-    else
+    if ($table !== false)
+        $table = json_decode($table, true);
+    
+    return $table;
+}
+
+function getRequestBodyArray($app){
+    $bodyStr = $app->request->getBody();    
+    $bodyArr = json_decode($bodyStr, true);
+    return $bodyArr;
+}
+
+function getIdForNewArrayElement($array){
+    $newId = getRandomString(5);
+    while (array_key_exists($newId, $array)){
+        $newId = getRandomString(5);
+    }
+    return $newId;
+}
+
+function addNewEntryToSubGameTable($app, $gameId, $tableFile, $name){
+    $gamesTable = getTable(GAMES_TABLE);
+    if (($gamesTable === false) || !array_key_exists($gameId, $gamesTable))
+    {
+        $app->response->setStatus(404);
+        $app->response->setBody('Game not found.');
+        return;
+    }
+    
+    $tableArray = getTable($tableFile);
+    if ($tableArray === false)
+        $tableArray = [];
+    if (!array_key_exists($gameId, $tableArray))
+        $tableArray[$gameId] = [];
+    
+    $newId = getIdForNewArrayElement($tableArray[$gameId]);
+    $tableArray[$gameId][$newId] = $name;
+    $writeResult = file_put_contents($tableFile, json_encode($tableArray));
+    if ($writeResult === false){
+        $app->response->setStatus(501);
+        $app->response->setBody('Could not write new data to file. No idea why.');
+        return;
+    }
+    $result['id'] = $newId;
+    $app->response->setBody(json_encode($result));
+}
+
+function updateEntryInSubGameTable($app, $gameId, $tableFile, $subId, $name){
+    $gamesTable = getTable(GAMES_TABLE);
+    if (($gamesTable === false) || !array_key_exists($gameId, $gamesTable))
+    {
+        $app->response->setStatus(404);
+        $app->response->setBody('Game not found.');
+        return;
+    }
+    
+    $subTable = getTable($tableFile);
+    if (($subTable === false) || !array_key_exists($gameId, $subTable) || 
+            !array_key_exists($subId, $subTable[$gameId]))
+    {
+        $app->response->setStatus(404);
+        $app->response->setBody('Dataset not found.');
+        return;
+    }    
+    
+    $subTable[$gameId][$subId] = $name;
+    
+    $writeResult = file_put_contents($tableFile, json_encode($subTable));
+    if ($writeResult === false){
+        $app->response->setStatus(501);
+        $app->response->setBody('Could not write new data to file. No idea why.');
+        return;
+    }
+}
+
+function setScore($app, $gameId, $sessionId, $playerId, $score){
+    $gamesTable = getTable(GAMES_TABLE);
+    if (($gamesTable === false) || !array_key_exists($gameId, $gamesTable))
+    {
+        $app->response->setStatus(404);
+        $app->response->setBody('Game not found.');
+        return;
+    }
+    
+    $sessionsTable = getTable(SESSIONS_TABLE);
+    if (($sessionsTable === false) || !array_key_exists($gameId, $sessionsTable) || 
+            !array_key_exists($sessionId, $sessionsTable[$gameId]))
+    {
+        $app->response->setStatus(404);
+        $app->response->setBody('Session not found.');
+        return;
+    }
+    
+    $playersTable = getTable(PLAYERS_TABLE);
+    if (($playersTable === false) || !array_key_exists($gameId, $playersTable) ||
+            !array_key_exists($playerId, $playersTable[$gameId]))
+    {
+        $app->response->setStatus(404);
+        $app->response->setBody('Player not found.');
+        return;
+    }
+    
+    $scoresArray = getTable(SCORES_TABLE);
+    if ($scoresArray === false)
+        $scoresArray = [];
+    if (!array_key_exists($gameId, $scoresArray))
+        $scoresArray[$gameId] = [];    
+    if (!array_key_exists($sessionId, $scoresArray[$gameId]))
+        $scoresArray[$gameId][$sessionId] = [];    
+    
+    $scoresArray[$gameId][$sessionId][$playerId] = $score;
+    
+    $writeResult = file_put_contents(SCORES_TABLE, json_encode($scoresArray));
+    if ($writeResult === false){
+        $app->response->setStatus(501);
+        $app->response->setBody('Could not write score data to file. No idea why.');
+        return;
+    }
+}
+
+$app->post("/games", function() use ($app){
+    $gamesTable = getTable(GAMES_TABLE);
+    if ($gamesTable === false)
         $gamesTable = [];
     
-    $bodyStr = $app->request->getBody();    
-    $bodyObj = json_decode($bodyStr, true);
-    if ($bodyObj && array_key_exists('name', $bodyObj) && (strlen($bodyObj['name']) > 0)) {
-        $gameId = getRandomString(5);
-        while (array_key_exists($gameId, $gamesTable)){
-            $gameId = getRandomString(5);
-        }
-        $gamesTable[$gameId] = $bodyObj['name'];
+    $bodyArr = getRequestBodyArray($app);
+    if ($bodyArr && array_key_exists('name', $bodyArr) && (strlen($bodyArr['name']) > 0)) {
+        $gameId = getIdForNewArrayElement($gamesTable);
+        $gamesTable[$gameId] = $bodyArr['name'];
         $writeResult = file_put_contents(GAMES_TABLE, json_encode($gamesTable));
-        if ($writeResult === false)
+        if ($writeResult === false){
             $app->response->setStatus(501);
+            $app->response->setBody('Could not write new data to file. No idea why.');
+            return;
+        }
+        $result['id'] = $gameId;
+        $app->response->setBody(json_encode($result));
     }
-    else
+    else{
         $app->response->setStatus(400);
+        $app->response->setBody('You need to pass an object with the key "name" and a nonempty string assigned to it.');
+    }
 });
 
-$app->get("/games/:id", function($id) use ($app){
-    $gamesTable = false;
-    if (file_exists(GAMES_TABLE))        
-        $gamesTable = file_get_contents(GAMES_TABLE);
-
-    if ($gamesTable !== false)
-        $gamesTable = json_decode($gamesTable, true);
-    else
-        $gamesTable = [];
-    
-    if (array_key_exists($id, $gamesTable)){
-        echo $gamesTable[$id];
-    }
-    else
+$app->put("/games/:gameId", function($gameId) use ($app){
+    $gamesTable = getTable(GAMES_TABLE);
+    if (($gamesTable === false) || !array_key_exists($gameId, $gamesTable)){
         $app->response->setStatus(404);
+        $app->response->setBody('Game not found.');
+        return;
+    }
+    
+    $bodyArr = getRequestBodyArray($app);
+    if ($bodyArr && array_key_exists('name', $bodyArr) && (strlen($bodyArr['name']) > 0)) {
+        $gamesTable[$gameId] = $bodyArr['name'];
+        $writeResult = file_put_contents(GAMES_TABLE, json_encode($gamesTable));
+        if ($writeResult === false){
+            $app->response->setStatus(501);
+            $app->response->setBody('Could not write new data to file. No idea why.');
+            return;
+        }
+    }
+    else{
+        $app->response->setStatus(400);
+        $app->response->setBody('You need to pass an object with the key "name" and a nonempty string assigned to it.');
+    }
+});
+
+$app->post("/games/:gameId/sessions", function($gameId) use ($app){    
+    $bodyArr = getRequestBodyArray($app);
+    if ($bodyArr && array_key_exists('name', $bodyArr) && (strlen($bodyArr['name']) > 0)) {
+        addNewEntryToSubGameTable($app, $gameId, SESSIONS_TABLE, $bodyArr['name']);
+    }
+    else{
+        $app->response->setStatus(400);
+        $app->response->setBody('You need to pass an object with the key "name" and a nonempty string assigned to it.');
+    }    
+});
+
+$app->put("/games/:gameId/sessions/:sessionId", function($gameId, $sessionId) use ($app){    
+    $bodyArr = getRequestBodyArray($app);
+    if ($bodyArr && array_key_exists('name', $bodyArr) && (strlen($bodyArr['name']) > 0)) {
+        updateEntryInSubGameTable($app, $gameId, SESSIONS_TABLE, $sessionId, $bodyArr['name']);
+    }
+    else{
+        $app->response->setStatus(400);
+        $app->response->setBody('You need to pass an object with the key "name" and a nonempty string assigned to it.');
+    }    
+});
+
+$app->post("/games/:gameId/players", function($gameId) use ($app){    
+    $bodyArr = getRequestBodyArray($app);
+    if ($bodyArr && array_key_exists('name', $bodyArr) && (strlen($bodyArr['name']) > 0)) {
+        addNewEntryToSubGameTable($app, $gameId, PLAYERS_TABLE, $bodyArr['name']);
+    }
+    else{
+        $app->response->setStatus(400);
+        $app->response->setBody('You need to pass an object with the key "name" and a nonempty string assigned to it.');
+    }    
+});
+
+$app->put("/games/:gameId/players/:playerId", function($gameId, $playerId) use ($app){    
+    $bodyArr = getRequestBodyArray($app);
+    if ($bodyArr && array_key_exists('name', $bodyArr) && (strlen($bodyArr['name']) > 0)) {
+        updateEntryInSubGameTable($app, $gameId, PLAYERS_TABLE, $playerId, $bodyArr['name']);
+    }
+    else{
+        $app->response->setStatus(400);
+        $app->response->setBody('You need to pass an object with the key "name" and a nonempty string assigned to it.');
+    }    
+});
+
+$app->put("/scores/game/:gameId/session/:sessionId/player/:playerId", function($gameId, $sessionId, $playerId) use ($app){    
+    $bodyArr = getRequestBodyArray($app);
+    if ($bodyArr && array_key_exists('score', $bodyArr) && is_int($bodyArr['score']) && ($bodyArr['score'] >= 0)) {
+        $app->response->setBody('Setting score: $gameId, $sessionId, $playerId, ' . $bodyArr['score']);
+        setScore($app, $gameId, $sessionId, $playerId, $bodyArr['score']);
+    }
+    else{
+        $app->response->setStatus(400);
+        $app->response->setBody('You need to pass an object with the key "score" and a positive integer assigned to it.');
+    }    
+});
+
+$app->get("/games/:gameId", function($gameId) use ($app){
+    $gamesTable = getTable(GAMES_TABLE);
+    if (($gamesTable === false) || !array_key_exists($gameId, $gamesTable))
+    {
+        $app->response->setStatus(404);
+        $app->response->setBody('Game not found.');
+        return;
+    }
+    
+    $sessionsTable = getTable(SESSIONS_TABLE);
+    $sessions = [];
+    if (($sessionsTable !== false) && array_key_exists($gameId, $sessionsTable))
+        $sessions = $sessionsTable[$gameId];
+    
+    $playersTable = getTable(PLAYERS_TABLE);
+    $players = [];
+    if (($playersTable !== false) && array_key_exists($gameId, $playersTable))
+        $players = $playersTable[$gameId];
+    
+    $scoresTable = getTable(SCORES_TABLE);
+    $scores = [];
+    if (($scoresTable !== false) && array_key_exists($gameId, $scoresTable))
+        $scores = $scoresTable[$gameId];
+
+    $result['name'] = $gamesTable[$gameId];
+    $result['sessions'] = $sessions;
+    $result['players'] = $players;
+    $result['scores'] = $scores;
+    $app->response->setBody(json_encode($result));
 });
 
 $app->get("/scores", function(){
