@@ -303,6 +303,26 @@ $app->put("/scores/game/:gameId/session/:sessionId/player/:playerId", function($
     }    
 });
 
+function DictionaryToObjectArray($dictionary, $keyPropName, $valuePropName){
+    $result = array();
+    foreach ($dictionary as $id => $name){
+        $obj[$keyPropName] = $id;
+        $obj[$valuePropName] = $name;
+        $result[] = $obj;
+    }
+    return $result;
+}
+
+$app->get("/games/", function() use ($app){
+    $gamesTable = getTable(GAMES_TABLE);
+    if ($gamesTable === false)
+        $result = [];
+    else
+        $result = DictionaryToObjectArray($gamesTable, 'id', 'name');
+    
+    $app->response->setBody(json_encode($result));
+});
+
 $app->get("/games/:gameId", function($gameId) use ($app){
     $gamesTable = getTable(GAMES_TABLE);
     if (($gamesTable === false) || !array_key_exists($gameId, $gamesTable))
@@ -328,8 +348,8 @@ $app->get("/games/:gameId", function($gameId) use ($app){
         $scores = $scoresTable[$gameId];
 
     $result['name'] = $gamesTable[$gameId];
-    $result['sessions'] = $sessions;
-    $result['players'] = $players;
+    $result['sessions'] = DictionaryToObjectArray($sessions, 'id', 'name');
+    $result['players'] = DictionaryToObjectArray($players, 'id', 'name');
     $result['scores'] = $scores;
     $app->response->setBody(json_encode($result));
 });
