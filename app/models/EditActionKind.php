@@ -14,8 +14,12 @@ namespace App\Models;
  * @author Stefan
  */
 class EditActionKind {
-    const Create = "create";
-    const Delete = "delete";
-    const Undo = "undo";
-    const Update = "update";
+    const AddName = "AddName";
+    const AddGame = "AddGame";
+    const DeleteName = "DeleteName";
+    const DeleteGame = "DeleteGame";
+    const DeleteScore = "DeleteScore";
+    const SetName = "SetName";
+    const SetScore = "SetScore";
+    const Undo = "Undo";
 }
