@@ -1,0 +1,49 @@
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-12">
+            <h1>Spielezettelplattformding</h1>
+        </div>        
+    </div>
+    <div class="row">
+        <div class="col-sm-4">
+            <form class="form-horizontal">
+                <fieldset>
+                    <legend>Existierende Spielrunden</legend>
+                </fieldset>
+            </form>
+            <div class="list-group">
+                <a class="list-group-item" href="#/games/{{game.id}}" ng-repeat="game in games | orderBy:name">{{game.name}}</a>
+            </div>                      
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-4">
+            <form class="form-horizontal">
+                <fieldset>
+
+                    <!-- Form Name -->
+                    <legend>Neue Runde eröffnen</legend>
+
+                    <!-- Text input-->
+                    <div class="form-group">
+                      <label class="col-md-3 control-label" for="newName">Name</label>  
+                      <div class="col-md-9">
+                      <input id="newName" name="newName" ng-model="newGameName"
+                             placeholder="z.B. Unsere mega coole Runde" class="form-control input-md" type="text">
+                      </div>
+                    </div>
+
+                    <!-- Button (Double) -->
+                    <div class="form-group">
+                      <label class="col-md-3 control-label" for="createButton"></label>
+                      <div class="col-md-9">
+                        <button id="createButton" name="createButton" class="btn btn-success" ng-click="doCreate()">Tu es!</button>
+                        <button id="cancelButton" name="cancelButton" class="btn btn-danger" ng-click="cancelCreate()">Lass es!</button>
+                      </div>
+                    </div>
+
+                </fieldset>
+            </form> 
+        </div>
+    </div>
+</div>    
