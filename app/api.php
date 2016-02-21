@@ -199,6 +199,7 @@ function setScore($app, $gameId, $sessionId, $playerId, $score){
     }
 }
 
+//Neues Spiel hinzufügen
 $app->post("/games", function() use ($app){
     $gamesTable = getTable(GAMES_TABLE);
     if ($gamesTable === false)
@@ -223,6 +224,7 @@ $app->post("/games", function() use ($app){
     }
 });
 
+//Bestehendes Spiel umbenennen
 $app->put("/games/:gameId", function($gameId) use ($app){
     $gamesTable = getTable(GAMES_TABLE);
     if (($gamesTable === false) || !array_key_exists($gameId, $gamesTable)){
@@ -247,6 +249,7 @@ $app->put("/games/:gameId", function($gameId) use ($app){
     }
 });
 
+//Session zu Spiel hinzufügen
 $app->post("/games/:gameId/sessions", function($gameId) use ($app){    
     $bodyArr = getRequestBodyArray($app);
     if ($bodyArr && array_key_exists('name', $bodyArr) && (strlen($bodyArr['name']) > 0)) {
@@ -258,6 +261,7 @@ $app->post("/games/:gameId/sessions", function($gameId) use ($app){
     }    
 });
 
+//Bestehende Session innerhalb von Spiel umbenennen
 $app->put("/games/:gameId/sessions/:sessionId", function($gameId, $sessionId) use ($app){    
     $bodyArr = getRequestBodyArray($app);
     if ($bodyArr && array_key_exists('name', $bodyArr) && (strlen($bodyArr['name']) > 0)) {
@@ -269,6 +273,7 @@ $app->put("/games/:gameId/sessions/:sessionId", function($gameId, $sessionId) us
     }    
 });
 
+//Spieler zu Spiel hinzufügen
 $app->post("/games/:gameId/players", function($gameId) use ($app){    
     $bodyArr = getRequestBodyArray($app);
     if ($bodyArr && array_key_exists('name', $bodyArr) && (strlen($bodyArr['name']) > 0)) {
@@ -280,6 +285,7 @@ $app->post("/games/:gameId/players", function($gameId) use ($app){
     }    
 });
 
+//Spieler umbenennen
 $app->put("/games/:gameId/players/:playerId", function($gameId, $playerId) use ($app){    
     $bodyArr = getRequestBodyArray($app);
     if ($bodyArr && array_key_exists('name', $bodyArr) && (strlen($bodyArr['name']) > 0)) {
@@ -291,6 +297,7 @@ $app->put("/games/:gameId/players/:playerId", function($gameId, $playerId) use (
     }    
 });
 
+//Einem Spieler in einer Sitzung eines Spiels einen Score zuweisen
 $app->put("/scores/game/:gameId/session/:sessionId/player/:playerId", function($gameId, $sessionId, $playerId) use ($app){    
     $bodyArr = getRequestBodyArray($app);
     if ($bodyArr && array_key_exists('score', $bodyArr) && is_int($bodyArr['score']) && ($bodyArr['score'] >= 0)) {
